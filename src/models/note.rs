@@ -27,11 +27,15 @@ impl Note {
         self.pos += NOTE_SPEED * get_frame_time();
     }
 
-    pub fn input_check (&mut self) -> bool {
+    pub fn input_check (&mut self, lane_animation: &mut Vec<(bool, f32)>) -> bool {
         let note_click_pos = NOTE_CLICK_POS.lock().unwrap();
         
         if is_key_pressed(LANE_KEYS[self.lane]) {
-            if self.pos >= *note_click_pos - NOTE_LENIENCE && self.pos <= *note_click_pos + NOTE_LENIENCE+NOTE_HEIGHT {std::mem::drop(note_click_pos); return true}
+            if self.pos >= *note_click_pos - NOTE_LENIENCE && self.pos <= *note_click_pos + NOTE_LENIENCE+NOTE_HEIGHT {
+                std::mem::drop(note_click_pos); 
+                lane_animation[self.lane].0 = true;
+                return true
+            }
             else {std::mem::drop(note_click_pos); return false}
         }else {std::mem::drop(note_click_pos); return false}
     }

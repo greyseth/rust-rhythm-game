@@ -20,6 +20,9 @@ pub static NOTE_CLICK_POS: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(0.0));
 
 #[macroquad::main("Rhythm Game")]
 async fn main() {
+    // (isAnimating, elapsed_time)
+    let mut lane_animation: Vec<(bool, f32)> = Vec::new();
+    
     let mut lanes: Vec<Lane> = Vec::new();
     let mut notes: Vec<Note> = Vec::new();
     let mut spawned_notes: Vec<Note> = Vec::new();
@@ -52,10 +55,17 @@ async fn main() {
             let x_pos = screen_width() / 2.0 + LANE_WIDTH * (i as f32 - 2.0);
             draw_rectangle(x_pos, *note_click_pos, LANE_WIDTH, NOTE_HEIGHT, color);
             lanes.push(Lane::new(x_pos, color));
+
+            if lane_animation.len() < LANE_COLORS.len() {lane_animation.push((false, 0.0));}
         }
         draw_line(lanes[0].x_pos, *note_click_pos-NOTE_LENIENCE, lanes[lanes.len()-1 as usize].x_pos + LANE_WIDTH, *note_click_pos-NOTE_LENIENCE, 2.0, PURPLE);
         draw_line(lanes[0].x_pos, *note_click_pos+NOTE_LENIENCE+NOTE_HEIGHT, lanes[lanes.len()-1 as usize].x_pos + LANE_WIDTH, *note_click_pos+NOTE_LENIENCE+NOTE_HEIGHT, 2.0, PURPLE);
         std::mem::drop(note_click_pos);
+
+        // Handles lane animation
+        for (index, la) in lane_animation.iter_mut().enumerate() {
+            lanes[index].animate(la);
+        }
 
         // Creates notes based on elapsed time
         let mut spawn_indexes: Vec<Note> = Vec::new();
@@ -72,14 +82,16 @@ async fn main() {
         let mut remove_indexes: Vec<Note> = Vec::new();
         for note in spawned_notes.iter_mut() {
             note.render_note(&lanes);
-            if note.input_check() {remove_indexes.push(note.clone()); println!("{time_elapsed}");}
+            if note.input_check(&mut lane_animation) {remove_indexes.push(note.clone());}
+
+            if note.pos >= screen_height() {remove_indexes.push(note.clone());}
         }
 
         for note_remove in remove_indexes {spawned_notes.remove(spawned_notes.iter().position(|n| n.compare(&note_remove)).unwrap());}
 
         time_elapsed += get_frame_time();
 
-        if is_key_down(KeyCode::LeftControl) && is_key_down(KeyCode::R) {testing_notes(&mut notes);}
+        if is_key_pressed(KeyCode::LeftControl) && is_key_down(KeyCode::R) {testing_notes(&mut notes);}
 
         next_frame().await;
     }
